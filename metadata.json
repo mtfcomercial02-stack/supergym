@@ -1,0 +1,7 @@
+{
+  "name": "Copy of GymMaster Pro",
+  "description": "Sistema completo de gestão de academia com controle financeiro, gestão de alunos, staff e vendas.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
