@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { Client, Payment } from '../types';
-import { Plus, Search, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Plus, Search, CheckCircle, XCircle, Clock, Ban, Trash2, Undo2 } from 'lucide-react';
+import { formatCurrency } from '../utils/pdf';
 
 const Clients = ({ role }: { role: string }) => {
   const [clients, setClients] = useState<Client[]>([]);
@@ -45,6 +46,10 @@ const Clients = ({ role }: { role: string }) => {
       fetchClients();
       setFormData({ full_name: '', email: '', phone: '', monthly_fee: '', start_date: new Date().toISOString().split('T')[0] });
     }
+  };
+
+  const handleUpdate = () => {
+    fetchClients();
   };
 
   const filteredClients = clients.filter(c => 
@@ -96,12 +101,15 @@ const Clients = ({ role }: { role: string }) => {
                   <td className="px-6 py-4">
                     <span className={`px-2 py-1 rounded-full text-xs ${
                       client.status === 'active' ? 'bg-green-100 text-green-800' : 
-                      client.status === 'late' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'
+                      client.status === 'late' ? 'bg-red-100 text-red-800' : 
+                      client.status === 'suspended' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'
                     }`}>
-                      {client.status === 'active' ? 'Ativo' : client.status === 'late' ? 'Atrasado' : client.status}
+                      {client.status === 'active' ? 'Ativo' : 
+                       client.status === 'late' ? 'Atrasado' : 
+                       client.status === 'suspended' ? 'Suspenso' : client.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4">R$ {client.monthly_fee}</td>
+                  <td className="px-6 py-4">{formatCurrency(client.monthly_fee)}</td>
                   <td className="px-6 py-4">{new Date(client.start_date).toLocaleDateString('pt-BR')}</td>
                   <td className="px-6 py-4">
                     <button 
@@ -123,6 +131,7 @@ const Clients = ({ role }: { role: string }) => {
         <ClientDetailModal 
           client={selectedClient} 
           onClose={() => setSelectedClient(null)} 
+          onUpdate={handleUpdate}
         />
       )}
 
@@ -166,7 +175,7 @@ const Clients = ({ role }: { role: string }) => {
   );
 };
 
-const ClientDetailModal = ({ client, onClose }: { client: Client; onClose: () => void }) => {
+const ClientDetailModal = ({ client, onClose, onUpdate }: { client: Client; onClose: () => void; onUpdate: () => void }) => {
   const [payments, setPayments] = useState<Payment[]>([]);
 
   useEffect(() => {
@@ -176,6 +185,46 @@ const ClientDetailModal = ({ client, onClose }: { client: Client; onClose: () =>
     };
     loadPayments();
   }, [client]);
+
+  // Actions
+  const handleSuspend = async () => {
+    if(!confirm('Tem certeza que deseja suspender este aluno?')) return;
+    const { error } = await supabase.from('clients').update({ status: 'suspended' }).eq('id', client.id);
+    if (!error) {
+      alert('Aluno suspenso com sucesso.');
+      onUpdate();
+      onClose();
+    }
+  };
+
+  const handleReactivate = async () => {
+    if(!confirm('Deseja reativar este aluno?')) return;
+    const { error } = await supabase.from('clients').update({ status: 'active' }).eq('id', client.id);
+    if (!error) {
+      alert('Suspensão cancelada. Aluno ativo.');
+      onUpdate();
+      onClose();
+    }
+  };
+
+  const handleDelete = async () => {
+    if(!confirm('ATENÇÃO: Tem certeza que deseja excluir permanentemente este aluno? Esta ação não pode ser desfeita.')) return;
+    
+    // Check for payments first
+    if(payments.length > 0) {
+      alert('Não é possível excluir um aluno com histórico financeiro para manter a integridade do caixa. Considere suspender o aluno.');
+      return;
+    }
+
+    const { error } = await supabase.from('clients').delete().eq('id', client.id);
+    if (error) {
+      alert('Erro ao excluir aluno. Tente novamente.');
+    } else {
+      alert('Aluno excluído.');
+      onUpdate();
+      onClose();
+    }
+  };
 
   // Timeline Logic
   const currentYear = new Date().getFullYear();
@@ -216,7 +265,11 @@ const ClientDetailModal = ({ client, onClose }: { client: Client; onClose: () =>
              </div>
              <div>
                <p className="text-sm text-gray-500">Mensalidade</p>
-               <p className="font-bold">R$ {client.monthly_fee}</p>
+               <p className="font-bold">{formatCurrency(client.monthly_fee)}</p>
+             </div>
+             <div>
+               <p className="text-sm text-gray-500">Status</p>
+               <p className="capitalize">{client.status}</p>
              </div>
           </div>
 
@@ -248,7 +301,7 @@ const ClientDetailModal = ({ client, onClose }: { client: Client; onClose: () =>
                  {payments.map(p => (
                    <li key={p.id} className="flex justify-between border-b pb-2">
                      <div>
-                       <span className="font-medium">R$ {p.amount}</span>
+                       <span className="font-medium">{formatCurrency(p.amount)}</span>
                        <span className="text-xs text-gray-500 ml-2">({p.months_covered.join(', ')})</span>
                      </div>
                      <span className="text-sm text-gray-600">{new Date(p.payment_date).toLocaleDateString()}</span>
@@ -256,6 +309,36 @@ const ClientDetailModal = ({ client, onClose }: { client: Client; onClose: () =>
                  ))}
                </ul>
              )}
+          </div>
+
+          <div className="border-t pt-6 mt-4">
+             <h3 className="text-lg font-semibold mb-3 text-gray-800">Ações da Conta</h3>
+             <div className="flex flex-wrap gap-3">
+                {client.status !== 'suspended' && (
+                  <button 
+                    onClick={handleSuspend}
+                    className="flex items-center px-4 py-2 border border-yellow-500 text-yellow-700 rounded hover:bg-yellow-50 transition"
+                  >
+                    <Ban className="h-4 w-4 mr-2" /> Suspender Aluno
+                  </button>
+                )}
+                
+                {client.status === 'suspended' && (
+                   <button 
+                    onClick={handleReactivate}
+                    className="flex items-center px-4 py-2 border border-green-500 text-green-700 rounded hover:bg-green-50 transition"
+                   >
+                     <Undo2 className="h-4 w-4 mr-2" /> Cancelar Suspensão
+                   </button>
+                )}
+
+                <button 
+                  onClick={handleDelete}
+                  className="flex items-center px-4 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200 transition"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" /> Excluir Aluno
+                </button>
+             </div>
           </div>
         </div>
       </div>

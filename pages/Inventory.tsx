@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { Product } from '../types';
 import { Package, ShoppingCart, AlertCircle } from 'lucide-react';
+import { formatCurrency } from '../utils/pdf';
 
 const Inventory = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -69,7 +70,7 @@ const Inventory = () => {
                     </div>
                     <p className="text-sm text-gray-500">{p.category}</p>
                     <div className="mt-2 flex justify-between items-end">
-                        <span className="font-bold text-gym-600">R$ {p.price}</span>
+                        <span className="font-bold text-gym-600">{formatCurrency(p.price)}</span>
                         <span className="text-xs text-gray-400">Estoque: {p.stock_quantity}</span>
                     </div>
                 </div>
@@ -78,8 +79,8 @@ const Inventory = () => {
                 <button 
                   onClick={async () => {
                      await supabase.from('products').insert([
-                         { name: 'Água 500ml', price: 3.50, stock_quantity: 50, category: 'Bebidas' },
-                         { name: 'Whey Protein', price: 15.00, stock_quantity: 10, category: 'Suplementos' },
+                         { name: 'Água 500ml', price: 300, stock_quantity: 50, category: 'Bebidas' },
+                         { name: 'Whey Protein', price: 15000, stock_quantity: 10, category: 'Suplementos' },
                      ]);
                      fetchProducts();
                   }}
@@ -101,9 +102,9 @@ const Inventory = () => {
                   <div key={idx} className="flex justify-between items-center border-b pb-2">
                       <div>
                           <p className="font-medium">{item.product.name}</p>
-                          <p className="text-xs text-gray-500">{item.qty} x R$ {item.product.price}</p>
+                          <p className="text-xs text-gray-500">{item.qty} x {formatCurrency(item.product.price)}</p>
                       </div>
-                      <span className="font-bold">R$ {item.qty * item.product.price}</span>
+                      <span className="font-bold">{formatCurrency(item.qty * item.product.price)}</span>
                   </div>
               ))}
               {cart.length === 0 && <p className="text-gray-400 text-center mt-10">Carrinho vazio</p>}
@@ -111,7 +112,7 @@ const Inventory = () => {
           <div className="p-4 bg-gray-50 border-t">
               <div className="flex justify-between text-xl font-bold mb-4">
                   <span>Total</span>
-                  <span>R$ {total.toFixed(2)}</span>
+                  <span>{formatCurrency(total)}</span>
               </div>
               <button 
                 disabled={cart.length === 0}

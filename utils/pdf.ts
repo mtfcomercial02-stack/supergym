@@ -2,9 +2,9 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Payment, Client, Staff, StaffAttendance } from '../types';
 
-// Helper to format currency
-const formatCurrency = (val: number) => 
-  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+// Helper to format currency to Angolan Kwanza (e.g., 10.000,00 Kz)
+export const formatCurrency = (val: number) => 
+  val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' Kz';
 
 export const generateReceiptPDF = (payment: Payment, client: Client) => {
   const doc = new jsPDF();

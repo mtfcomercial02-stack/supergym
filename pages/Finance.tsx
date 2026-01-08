@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 import { Client, Payment } from '../types';
-import { generateReceiptPDF, generateDailyClosingPDF } from '../utils/pdf';
+import { generateReceiptPDF, generateDailyClosingPDF, formatCurrency } from '../utils/pdf';
 import { DollarSign, FileText, Download } from 'lucide-react';
 
 const Finance = ({ role }: { role: string }) => {
@@ -128,7 +128,7 @@ const Finance = ({ role }: { role: string }) => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium">Valor Total (R$)</label>
+            <label className="block text-sm font-medium">Valor Total (Kz)</label>
             <input 
               type="number" 
               className="w-full border p-2 rounded"
@@ -166,9 +166,7 @@ const Finance = ({ role }: { role: string }) => {
           <div className="bg-gray-50 p-4 rounded text-center">
             <p className="text-sm text-gray-500">Total Recebido Hoje</p>
             <p className="text-3xl font-bold text-green-600">
-              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
-                todayTransactions.reduce((acc, t) => acc + t.amount, 0)
-              )}
+              {formatCurrency(todayTransactions.reduce((acc, t) => acc + t.amount, 0))}
             </p>
           </div>
 
@@ -184,7 +182,7 @@ const Finance = ({ role }: { role: string }) => {
                  {todayTransactions.map((t, idx) => (
                    <tr key={idx} className="border-b">
                      <td className="py-2">{t.client?.full_name || 'Venda Produto'}</td>
-                     <td className="py-2 font-medium">R$ {t.amount}</td>
+                     <td className="py-2 font-medium">{formatCurrency(t.amount)}</td>
                    </tr>
                  ))}
                </tbody>
